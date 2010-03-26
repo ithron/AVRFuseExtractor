@@ -1,0 +1,14 @@
+This script extract the fuse bytes from the .fuse section of a AVR elf file.
+See the avr-libc documentation (http://www.nongnu.org/avr-libc/user-manual/group__avr__fuse.html) for more information on how to embedd the fuse bytes into the elf file.
+
+Usage:
+
+	./extractfuses [a|l|h|e|avrdude] elf-file
+	
+Options:
+
+	a			print all fuse bytes in the order high, low, extended
+	l			print the low byte
+	h			print the high byte
+	e			print the extended byte
+	avrdude	print the avrdude command to program the fuses
