@@ -25,9 +25,43 @@
 # authors and should not be interpreted as representing official policies, either expressed
 # or implied, of Stefan Reinhold.
 
+FUSECMD="avr-objdump -s -j .fuse $2"
+
 function help_message
 {
 	echo "Usage: $0 [a|l|h|e|avrdude] elf-file"
+}
+
+function objdump_error
+{
+	if ($FUSECMD 2>&1 | grep -q "section.*not found")
+	then
+		cat<<EOF 1>&2
+Error: The .fuse section was not found.
+
+In avr-libc 1.8 the FUSES helper macro does not add the attribute "used". As a
+result the section can be dropped due to linker optimizations.  This appears to
+be fixed in avr-libc as of at least svn r2297.
+
+As a workaround, use
+__fuse_t __fuse __attribute__((section (".fuse"), used)) = 
+{
+    .low = LFUSE_DEFAULT,
+    .high = HFUSE_DEFAULT,
+    .extended = EFUSE_DEFAULT
+};
+
+rather than
+
+FUSES =
+{
+    .low = LFUSE_DEFAULT,
+    .high = HFUSE_DEFAULT,
+    .extended = EFUSE_DEFAULT
+};
+EOF
+	fi
+	exit 1
 }
 
 if [ $# -ne 2 ]
@@ -36,7 +70,12 @@ then
 	exit 0
 fi
 
-fuses=`avr-objdump -s -j .fuse $2 | tail -n 1 | sed 's/^ *[0-9a-f]\{6,6\}[ \t][ \t]*\([0-9a-f]\{6,6\}\).*/\1/'`
+fuses=`$FUSECMD | tail -n 1 | sed 's/^ *[0-9a-f]\{6,6\}[ \t][ \t]*\([0-9a-f]\{6,6\}\).*/\1/'`
+
+if [ "$fuses"x == x ]
+then
+	objdump_error
+fi
 
 low=`echo $fuses | sed 's/\([0-9a-f]\{2,2\}\)[0-9a-f]\{4,4\}/\1/'`
 high=`echo $fuses | sed 's/[0-9a-f]\{2,2\}\([0-9a-f]\{2,2\}\)[0-9a-f]\{2,2\}/\1/'`
